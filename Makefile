@@ -1,4 +1,4 @@
-.PHONY: build build-backend build-web run run-backend run-web stop stop-backend stop-web logs-backend logs-web index
+.PHONY: build build-backend build-web run run-backend run-web stop stop-backend stop-web logs-backend logs-web index status help
 
 # Configuration
 BACKEND_ADDR    ?= localhost:9999
@@ -38,7 +38,7 @@ run-backend: build-backend stop-backend ## Start the codesearch backend
 		echo "Backend failed to start. Logs:"; cat $(BACKEND_LOG); exit 1; \
 	fi
 
-run-web: build stop-web ## Start the web frontend (with template reload)
+run-web: build-web stop-web ## Start the web frontend (with template reload)
 	$(LIVEGREP_BIN) -docroot $(DOCROOT) -reload $(SERVER_CONFIG) > $(WEB_LOG) 2>&1 & echo $$! > $(WEB_PID_FILE)
 	@sleep 2
 	@if kill -0 $$(cat $(WEB_PID_FILE)) 2>/dev/null; then \
