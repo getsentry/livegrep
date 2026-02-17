@@ -4,7 +4,6 @@
 BACKEND_ADDR    ?= localhost:9999
 WEB_ADDR        ?= 127.0.0.1:8910
 INDEX_CONFIG    ?= doc/examples/livegrep/index.json
-SERVER_CONFIG   ?= doc/examples/livegrep/server.json
 DOCROOT          = $(shell pwd)/bazel-bin/cmd/livegrep/livegrep_/livegrep.runfiles/_main/web
 
 CODESEARCH_BIN   = bazel-bin/src/tools/codesearch
@@ -39,7 +38,7 @@ run-backend: build-backend stop-backend ## Start the codesearch backend
 	fi
 
 run-web: build-web stop-web ## Start the web frontend (with template reload)
-	$(LIVEGREP_BIN) -listen $(WEB_ADDR) -docroot $(DOCROOT) -reload $(SERVER_CONFIG) > $(WEB_LOG) 2>&1 & echo $$! > $(WEB_PID_FILE)
+	$(LIVEGREP_BIN) -listen $(WEB_ADDR) -connect $(BACKEND_ADDR) -docroot $(DOCROOT) -reload > $(WEB_LOG) 2>&1 & echo $$! > $(WEB_PID_FILE)
 	@sleep 2
 	@if kill -0 $$(cat $(WEB_PID_FILE)) 2>/dev/null; then \
 		echo "Web frontend running (PID $$(cat $(WEB_PID_FILE))) on http://$(WEB_ADDR)"; \
