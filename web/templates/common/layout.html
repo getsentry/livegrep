@@ -23,6 +23,7 @@
         var m = document.cookie.match(/(?:^|;\s*)prefs=([^;]*)/);
         if (!m) return;
         var p = JSON.parse(decodeURIComponent(m[1]));
+        // NOTE: keep in sync with syntaxThemes in codesearch_ui.js
         var themes = {
           'dracula':['dark','prism-dracula.min.css'],'one-dark':['dark','prism-one-dark.min.css'],
           'nord':['dark','prism-nord.min.css'],'solarized-dark':['dark','prism-solarized-dark-atom.min.css'],

@@ -22,18 +22,22 @@ var last_url_update = 0;
 
 var PRISM_THEMES_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/';
 
-var syntaxThemes = {
-  'dracula':         {mode:'dark',  css:'prism-dracula.min.css'},
-  'one-dark':        {mode:'dark',  css:'prism-one-dark.min.css'},
-  'nord':            {mode:'dark',  css:'prism-nord.min.css'},
-  'solarized-dark':  {mode:'dark',  css:'prism-solarized-dark-atom.min.css'},
-  'material-dark':   {mode:'dark',  css:'prism-material-dark.min.css'},
-  'gruvbox-dark':    {mode:'dark',  css:'prism-gruvbox-dark.min.css'},
-  'vsc-dark':        {mode:'dark',  css:'prism-vsc-dark-plus.min.css'},
-  'one-light':       {mode:'light', css:'prism-one-light.min.css'},
-  'material-light':  {mode:'light', css:'prism-material-light.min.css'},
-  'gruvbox-light':   {mode:'light', css:'prism-gruvbox-light.min.css'}
-};
+// NOTE: keep in sync with the early-load script in layout.html (mode + css only)
+var syntaxThemes = [
+  {key:'dracula',        label:'Dracula',        mode:'dark',  css:'prism-dracula.min.css'},
+  {key:'one-dark',       label:'One Dark',       mode:'dark',  css:'prism-one-dark.min.css'},
+  {key:'nord',           label:'Nord',           mode:'dark',  css:'prism-nord.min.css'},
+  {key:'solarized-dark', label:'Solarized Dark', mode:'dark',  css:'prism-solarized-dark-atom.min.css'},
+  {key:'material-dark',  label:'Material Dark',  mode:'dark',  css:'prism-material-dark.min.css'},
+  {key:'gruvbox-dark',   label:'Gruvbox Dark',   mode:'dark',  css:'prism-gruvbox-dark.min.css'},
+  {key:'vsc-dark',       label:'VS Code Dark',   mode:'dark',  css:'prism-vsc-dark-plus.min.css'},
+  {key:'one-light',      label:'One Light',      mode:'light', css:'prism-one-light.min.css'},
+  {key:'material-light', label:'Material Light', mode:'light', css:'prism-material-light.min.css'},
+  {key:'gruvbox-light',  label:'Gruvbox Light',  mode:'light', css:'prism-gruvbox-light.min.css'}
+];
+
+var syntaxThemeMap = {};
+syntaxThemes.forEach(function(t) { syntaxThemeMap[t.key] = t; });
 
 function applyPageMode(mode) {
   if (mode === 'light' || mode === 'dark') {
@@ -45,7 +49,7 @@ function applyPageMode(mode) {
 
 function applySyntaxTheme(themeName) {
   var existing = document.getElementById('syntax-theme-css');
-  var theme = syntaxThemes[themeName];
+  var theme = syntaxThemeMap[themeName];
   if (theme) {
     applyPageMode(theme.mode);
     if (existing) {
@@ -861,6 +865,12 @@ var CodesearchUI = function() {
       CodesearchUI.input_regex = $('input[name=regex]');
       CodesearchUI.input_context = $('input[name=context]');
       CodesearchUI.input_syntax_theme = $('#syntax-theme');
+      if (CodesearchUI.input_syntax_theme.length) {
+        CodesearchUI.input_syntax_theme.append($('<option>').val('default').text('Default'));
+        syntaxThemes.forEach(function(t) {
+          CodesearchUI.input_syntax_theme.append($('<option>').val(t.key).text(t.label));
+        });
+      }
 
       if (CodesearchUI.inputs_case.filter(':checked').length == 0) {
           CodesearchUI.inputs_case.filter('[value=auto]').attr('checked', true);
