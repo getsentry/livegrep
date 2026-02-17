@@ -39,7 +39,7 @@ run-backend: build-backend stop-backend ## Start the codesearch backend
 	fi
 
 run-web: build-web stop-web ## Start the web frontend (with template reload)
-	$(LIVEGREP_BIN) -docroot $(DOCROOT) -reload $(SERVER_CONFIG) > $(WEB_LOG) 2>&1 & echo $$! > $(WEB_PID_FILE)
+	$(LIVEGREP_BIN) -listen $(WEB_ADDR) -docroot $(DOCROOT) -reload $(SERVER_CONFIG) > $(WEB_LOG) 2>&1 & echo $$! > $(WEB_PID_FILE)
 	@sleep 2
 	@if kill -0 $$(cat $(WEB_PID_FILE)) 2>/dev/null; then \
 		echo "Web frontend running (PID $$(cat $(WEB_PID_FILE))) on http://$(WEB_ADDR)"; \
