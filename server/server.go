@@ -201,14 +201,16 @@ func (s *server) ServeHelp(ctx context.Context, w http.ResponseWriter, r *http.R
 	http.Redirect(w, r, "/search", 303)
 }
 
+const MaxIndexAge = 3*time.Hour + 30*time.Minute
+
 func (s *server) ServeHealthcheck(w http.ResponseWriter, r *http.Request) {
-	// All backends must have (at some point) reported an index age for us to
-	// report as healthy.
-	// TODO: report as unhealthy if a backend goes down after we've spoken to
-	// it.
 	for _, bk := range s.bk {
 		if bk.I.IndexTime.IsZero() {
-			http.Error(w, fmt.Sprintf("unhealthy backend '%s' '%s'\n", bk.Id, bk.Addr), 500)
+			http.Error(w, fmt.Sprintf("unhealthy backend '%s' '%s': no index loaded\n", bk.Id, bk.Addr), 500)
+			return
+		}
+		if age := time.Since(bk.I.IndexTime); age > MaxIndexAge {
+			http.Error(w, fmt.Sprintf("unhealthy backend '%s' '%s': index is %v old\n", bk.Id, bk.Addr, age.Truncate(time.Second)), 500)
 			return
 		}
 	}
