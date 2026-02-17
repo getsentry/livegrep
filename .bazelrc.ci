@@ -3,7 +3,7 @@ build --host_cxxopt=-std=c++17 --cxxopt=-std=c++17
 
 startup --host_jvm_args=-Dbazel.DigestFunction=sha256
 
-build --compilation_mode=fastbuild
+build --compilation_mode=opt
 build --disk_cache=~/.cache/bazel-disk
 
 # This is so we understand failures better
