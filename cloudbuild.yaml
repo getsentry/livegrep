@@ -1,0 +1,29 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
+      - '.'
+
+  # Push all tags
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
+
+timeout: 1800s
+
+options:
+  logging: CLOUD_LOGGING_ONLY
