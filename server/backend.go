@@ -24,6 +24,12 @@ type I struct {
 	IndexTime time.Time
 }
 
+func (i *I) GetIndexTime() time.Time {
+	i.Lock()
+	defer i.Unlock()
+	return i.IndexTime
+}
+
 type Backend struct {
 	Id         string
 	Addr       string
