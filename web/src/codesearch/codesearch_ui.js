@@ -4,6 +4,7 @@ var Cookies = require('js-cookie');
 
 var Codesearch = require('codesearch/codesearch.js').Codesearch;
 var RepoSelector = require('codesearch/repo_selector.js');
+var highlight = require('codesearch/highlight.js');
 
 var KeyCodes = {
   SLASH_OR_QUESTION_MARK: 191
@@ -18,6 +19,49 @@ function init(initData) {
 
 var h = new html.HTMLFactory();
 var last_url_update = 0;
+
+var PRISM_THEMES_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/';
+
+var syntaxThemes = {
+  'dracula':         {mode:'dark',  css:'prism-dracula.min.css'},
+  'one-dark':        {mode:'dark',  css:'prism-one-dark.min.css'},
+  'nord':            {mode:'dark',  css:'prism-nord.min.css'},
+  'solarized-dark':  {mode:'dark',  css:'prism-solarized-dark-atom.min.css'},
+  'material-dark':   {mode:'dark',  css:'prism-material-dark.min.css'},
+  'gruvbox-dark':    {mode:'dark',  css:'prism-gruvbox-dark.min.css'},
+  'vsc-dark':        {mode:'dark',  css:'prism-vsc-dark-plus.min.css'},
+  'one-light':       {mode:'light', css:'prism-one-light.min.css'},
+  'material-light':  {mode:'light', css:'prism-material-light.min.css'},
+  'gruvbox-light':   {mode:'light', css:'prism-gruvbox-light.min.css'}
+};
+
+function applyPageMode(mode) {
+  if (mode === 'light' || mode === 'dark') {
+    document.documentElement.setAttribute('data-theme', mode);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function applySyntaxTheme(themeName) {
+  var existing = document.getElementById('syntax-theme-css');
+  var theme = syntaxThemes[themeName];
+  if (theme) {
+    applyPageMode(theme.mode);
+    if (existing) {
+      existing.href = PRISM_THEMES_CDN + theme.css;
+    } else {
+      var link = document.createElement('link');
+      link.id = 'syntax-theme-css';
+      link.rel = 'stylesheet';
+      link.href = PRISM_THEMES_CDN + theme.css;
+      document.head.appendChild(link);
+    }
+  } else {
+    applyPageMode('auto');
+    if (existing) existing.remove();
+  }
+}
 
 function vercmp(a, b) {
   var re = /^([0-9]*)([^0-9]*)(.*)$/;
@@ -173,20 +217,25 @@ var MatchView = Backbone.View.extend({
     var lno = this.model.get('lno');
     var ctxBefore = this.model.get('context_before'), clip_before = this.model.get('clip_before');
     var ctxAfter = this.model.get('context_after'), clip_after = this.model.get('clip_after');
+    var language = this.options.language;
 
     var lines_to_display_before = Math.max(0, ctxBefore.length - (clip_before || 0));
     for (i = 0; i < lines_to_display_before; i ++) {
+      var ctxTextBefore = this.model.get('context_before')[i];
+      var ctxNodesBefore = highlight.highlightContext(ctxTextBefore, language);
       ctx_before.unshift(
         this._renderLno(lno - i - 1, false),
-        h.span([this.model.get('context_before')[i]]),
+        ctxNodesBefore ? h.span(ctxNodesBefore) : h.span([ctxTextBefore]),
         h.span({}, [])
       );
     }
     var lines_to_display_after = Math.max(0, ctxAfter.length - (clip_after || 0));
     for (i = 0; i < lines_to_display_after; i ++) {
+      var ctxTextAfter = this.model.get('context_after')[i];
+      var ctxNodesAfter = highlight.highlightContext(ctxTextAfter, language);
       ctx_after.push(
         this._renderLno(lno + i + 1, false),
-        h.span([this.model.get('context_after')[i]]),
+        ctxNodesAfter ? h.span(ctxNodesAfter) : h.span([ctxTextAfter]),
         h.span({}, [])
       );
     }
@@ -195,6 +244,14 @@ var MatchView = Backbone.View.extend({
     var pieces = [line.substring(0, bounds[0]),
                   line.substring(bounds[0], bounds[1]),
                   line.substring(bounds[1])];
+
+    var highlightedNodes = highlight.highlightLine(line, language, bounds);
+    var matchLineContent;
+    if (highlightedNodes) {
+      matchLineContent = h.span({cls: 'matchline'}, highlightedNodes);
+    } else {
+      matchLineContent = h.span({cls: 'matchline'}, [pieces[0], h.span({cls: 'matchstr'}, [pieces[1]]), pieces[2]]);
+    }
 
     var classes = ['match'];
     if(clip_before !== undefined) classes.push('clip-before');
@@ -215,7 +272,7 @@ var MatchView = Backbone.View.extend({
         ctx_before,
         [
             this._renderLno(lno, true),
-            h.span({cls: 'matchline'}, [pieces[0], h.span({cls: 'matchstr'}, [pieces[1]]), pieces[2]]),
+            matchLineContent,
             h.span({cls: 'matchlinks'}, links)
         ],
         ctx_after
@@ -553,14 +610,30 @@ var FileGroupView = Backbone.View.extend({
   render: function() {
     var matches = this.model.matches;
     var el = this.$el;
+    var self = this;
     el.empty();
     el.append(this.render_header(this.model.path_info.tree, this.model.path_info.version, this.model.path_info.path));
+    var language = highlight.detectLanguage(this.model.path_info.path);
     matches.forEach(function(match) {
       el.append(
-        new MatchView({model:match}).render().el
+        new MatchView({model:match, language: language}).render().el
       );
     });
     el.addClass('file-group');
+
+    if (language && typeof Prism !== 'undefined' && !Prism.languages[language] &&
+        Prism.plugins && Prism.plugins.autoloader && !self._loadingLanguage) {
+      self._loadingLanguage = true;
+      Prism.plugins.autoloader.loadLanguages([language], function() {
+        self._loadingLanguage = false;
+        if (Prism.languages[language]) {
+          self.render();
+        }
+      }, function() {
+        self._loadingLanguage = false;
+      });
+    }
+
     return this;
   }
 });
@@ -787,6 +860,7 @@ var CodesearchUI = function() {
       CodesearchUI.inputs_case = $('input[name=fold_case]');
       CodesearchUI.input_regex = $('input[name=regex]');
       CodesearchUI.input_context = $('input[name=context]');
+      CodesearchUI.input_syntax_theme = $('#syntax-theme');
 
       if (CodesearchUI.inputs_case.filter(':checked').length == 0) {
           CodesearchUI.inputs_case.filter('[value=auto]').attr('checked', true);
@@ -811,6 +885,12 @@ var CodesearchUI = function() {
       });
       CodesearchUI.input_context.change(function(){
         CodesearchUI.set_pref('context', CodesearchUI.input_context.prop('checked'));
+      });
+
+      CodesearchUI.input_syntax_theme.change(function(){
+        var theme = CodesearchUI.input_syntax_theme.val();
+        applySyntaxTheme(theme);
+        CodesearchUI.set_pref('syntaxTheme', theme);
       });
 
       CodesearchUI.toggle_context();
@@ -928,6 +1008,10 @@ var CodesearchUI = function() {
       }
       if (prefs['context'] !== undefined) {
         CodesearchUI.input_context.prop('checked', prefs['context']);
+      }
+      if (prefs['syntaxTheme'] !== undefined && CodesearchUI.input_syntax_theme.length) {
+        CodesearchUI.input_syntax_theme.val(prefs['syntaxTheme']);
+        applySyntaxTheme(prefs['syntaxTheme']);
       }
     },
     set_pref: function(key, value) {
