@@ -297,5 +297,6 @@ func isTestFile(path string) bool {
 		strings.HasSuffix(path, ".test.tsx") ||
 		strings.HasSuffix(path, "_test.py") ||
 		strings.HasSuffix(path, ".spec.ts") ||
-		strings.HasSuffix(path, ".spec.js")
+		strings.HasSuffix(path, ".spec.js") ||
+		strings.HasSuffix(path, ".spec.tsx")
 }
