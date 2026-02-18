@@ -1002,6 +1002,13 @@ var CodesearchUI = function() {
       if (parms['repo[]'])
         repos = repos.concat(parms['repo[]']);
       RepoSelector.updateSelected(repos);
+
+      // Sync theme dropdown from saved prefs (the early-load script in
+      // layout.html already applies the visual theme; this syncs the control)
+      var prefs = Cookies.getJSON('prefs');
+      if (prefs && prefs['syntaxTheme'] !== undefined && CodesearchUI.input_syntax_theme.length) {
+        CodesearchUI.input_syntax_theme.val(prefs['syntaxTheme']);
+      }
     },
     init_controls_from_prefs: function() {
       var prefs = Cookies.getJSON('prefs');
