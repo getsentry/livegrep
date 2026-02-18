@@ -60,7 +60,7 @@ function updateOptions(newOptions) {
         var parts = newOptions[i].split('/');
         var group = parts.slice(0, parts.length - 1).join('/') + '/';
         var option = parts[parts.length - 1];
-        var value = group + option;
+        var value = group === '/' ? option : group + option;
 
         if (group !== '/' && group !== currentGroup) {
             if (currentGroup !== null && currentGroup !== '/') {

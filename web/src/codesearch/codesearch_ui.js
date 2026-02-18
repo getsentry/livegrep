@@ -4,6 +4,7 @@ var Cookies = require('js-cookie');
 
 var Codesearch = require('codesearch/codesearch.js').Codesearch;
 var RepoSelector = require('codesearch/repo_selector.js');
+var highlight = require('codesearch/highlight.js');
 
 var KeyCodes = {
   SLASH_OR_QUESTION_MARK: 191
@@ -18,6 +19,53 @@ function init(initData) {
 
 var h = new html.HTMLFactory();
 var last_url_update = 0;
+
+var PRISM_THEMES_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/';
+
+// NOTE: keep in sync with the early-load script in layout.html (mode + css only)
+var syntaxThemes = [
+  {key:'dracula',        label:'Dracula',        mode:'dark',  css:'prism-dracula.min.css'},
+  {key:'one-dark',       label:'One Dark',       mode:'dark',  css:'prism-one-dark.min.css'},
+  {key:'nord',           label:'Nord',           mode:'dark',  css:'prism-nord.min.css'},
+  {key:'solarized-dark', label:'Solarized Dark', mode:'dark',  css:'prism-solarized-dark-atom.min.css'},
+  {key:'material-dark',  label:'Material Dark',  mode:'dark',  css:'prism-material-dark.min.css'},
+  {key:'gruvbox-dark',   label:'Gruvbox Dark',   mode:'dark',  css:'prism-gruvbox-dark.min.css'},
+  {key:'vsc-dark',       label:'VS Code Dark',   mode:'dark',  css:'prism-vsc-dark-plus.min.css'},
+  {key:'one-light',      label:'One Light',      mode:'light', css:'prism-one-light.min.css'},
+  {key:'material-light', label:'Material Light', mode:'light', css:'prism-material-light.min.css'},
+  {key:'gruvbox-light',  label:'Gruvbox Light',  mode:'light', css:'prism-gruvbox-light.min.css'}
+];
+
+var syntaxThemeMap = {};
+syntaxThemes.forEach(function(t) { syntaxThemeMap[t.key] = t; });
+
+function applyPageMode(mode) {
+  if (mode === 'light' || mode === 'dark') {
+    document.documentElement.setAttribute('data-theme', mode);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+
+function applySyntaxTheme(themeName) {
+  var existing = document.getElementById('syntax-theme-css');
+  var theme = syntaxThemeMap[themeName];
+  if (theme) {
+    applyPageMode(theme.mode);
+    if (existing) {
+      existing.href = PRISM_THEMES_CDN + theme.css;
+    } else {
+      var link = document.createElement('link');
+      link.id = 'syntax-theme-css';
+      link.rel = 'stylesheet';
+      link.href = PRISM_THEMES_CDN + theme.css;
+      document.head.appendChild(link);
+    }
+  } else {
+    applyPageMode('auto');
+    if (existing) existing.remove();
+  }
+}
 
 function vercmp(a, b) {
   var re = /^([0-9]*)([^0-9]*)(.*)$/;
@@ -173,20 +221,25 @@ var MatchView = Backbone.View.extend({
     var lno = this.model.get('lno');
     var ctxBefore = this.model.get('context_before'), clip_before = this.model.get('clip_before');
     var ctxAfter = this.model.get('context_after'), clip_after = this.model.get('clip_after');
+    var language = this.options.language;
 
     var lines_to_display_before = Math.max(0, ctxBefore.length - (clip_before || 0));
     for (i = 0; i < lines_to_display_before; i ++) {
+      var ctxTextBefore = this.model.get('context_before')[i];
+      var ctxNodesBefore = highlight.highlightContext(ctxTextBefore, language);
       ctx_before.unshift(
         this._renderLno(lno - i - 1, false),
-        h.span([this.model.get('context_before')[i]]),
+        ctxNodesBefore ? h.span(ctxNodesBefore) : h.span([ctxTextBefore]),
         h.span({}, [])
       );
     }
     var lines_to_display_after = Math.max(0, ctxAfter.length - (clip_after || 0));
     for (i = 0; i < lines_to_display_after; i ++) {
+      var ctxTextAfter = this.model.get('context_after')[i];
+      var ctxNodesAfter = highlight.highlightContext(ctxTextAfter, language);
       ctx_after.push(
         this._renderLno(lno + i + 1, false),
-        h.span([this.model.get('context_after')[i]]),
+        ctxNodesAfter ? h.span(ctxNodesAfter) : h.span([ctxTextAfter]),
         h.span({}, [])
       );
     }
@@ -195,6 +248,14 @@ var MatchView = Backbone.View.extend({
     var pieces = [line.substring(0, bounds[0]),
                   line.substring(bounds[0], bounds[1]),
                   line.substring(bounds[1])];
+
+    var highlightedNodes = highlight.highlightLine(line, language, bounds);
+    var matchLineContent;
+    if (highlightedNodes) {
+      matchLineContent = h.span({cls: 'matchline'}, highlightedNodes);
+    } else {
+      matchLineContent = h.span({cls: 'matchline'}, [pieces[0], h.span({cls: 'matchstr'}, [pieces[1]]), pieces[2]]);
+    }
 
     var classes = ['match'];
     if(clip_before !== undefined) classes.push('clip-before');
@@ -215,7 +276,7 @@ var MatchView = Backbone.View.extend({
         ctx_before,
         [
             this._renderLno(lno, true),
-            h.span({cls: 'matchline'}, [pieces[0], h.span({cls: 'matchstr'}, [pieces[1]]), pieces[2]]),
+            matchLineContent,
             h.span({cls: 'matchlinks'}, links)
         ],
         ctx_after
@@ -454,12 +515,14 @@ var SearchState = Backbone.Model.extend({
       return '/search';
     var base = '/search';
 
+    if (current.repo && current.repo.length) {
+      q.repo = current.repo;
+    }
     if (current.q !== "") {
       q.q = current.q;
       q.fold_case = current.fold_case;
       q.regex = current.regex;
       q.context = this.get('context');
-      q.repo = current.repo;
     }
 
     if (current.backend) {
@@ -553,14 +616,30 @@ var FileGroupView = Backbone.View.extend({
   render: function() {
     var matches = this.model.matches;
     var el = this.$el;
+    var self = this;
     el.empty();
     el.append(this.render_header(this.model.path_info.tree, this.model.path_info.version, this.model.path_info.path));
+    var language = highlight.detectLanguage(this.model.path_info.path);
     matches.forEach(function(match) {
       el.append(
-        new MatchView({model:match}).render().el
+        new MatchView({model:match, language: language}).render().el
       );
     });
     el.addClass('file-group');
+
+    if (language && typeof Prism !== 'undefined' && !Prism.languages[language] &&
+        Prism.plugins && Prism.plugins.autoloader && !self._loadingLanguage) {
+      self._loadingLanguage = true;
+      Prism.plugins.autoloader.loadLanguages([language], function() {
+        self._loadingLanguage = false;
+        if (Prism.languages[language]) {
+          self.render();
+        }
+      }, function() {
+        self._loadingLanguage = false;
+      });
+    }
+
     return this;
   }
 });
@@ -787,6 +866,13 @@ var CodesearchUI = function() {
       CodesearchUI.inputs_case = $('input[name=fold_case]');
       CodesearchUI.input_regex = $('input[name=regex]');
       CodesearchUI.input_context = $('input[name=context]');
+      CodesearchUI.input_syntax_theme = $('#syntax-theme');
+      if (CodesearchUI.input_syntax_theme.length) {
+        CodesearchUI.input_syntax_theme.append($('<option>').val('default').text('Default'));
+        syntaxThemes.forEach(function(t) {
+          CodesearchUI.input_syntax_theme.append($('<option>').val(t.key).text(t.label));
+        });
+      }
 
       if (CodesearchUI.inputs_case.filter(':checked').length == 0) {
           CodesearchUI.inputs_case.filter('[value=auto]').attr('checked', true);
@@ -813,6 +899,12 @@ var CodesearchUI = function() {
         CodesearchUI.set_pref('context', CodesearchUI.input_context.prop('checked'));
       });
 
+      CodesearchUI.input_syntax_theme.change(function(){
+        var theme = CodesearchUI.input_syntax_theme.val();
+        applySyntaxTheme(theme);
+        CodesearchUI.set_pref('syntaxTheme', theme);
+      });
+
       CodesearchUI.toggle_context();
 
       // Defer heavy repo dropdown initialization so the page can paint first.
@@ -820,6 +912,7 @@ var CodesearchUI = function() {
       setTimeout(function() {
         RepoSelector.init();
         CodesearchUI.update_repo_options();
+        CodesearchUI.render_repo_presets();
         CodesearchUI.init_query();
       }, 0);
 
@@ -912,6 +1005,13 @@ var CodesearchUI = function() {
       if (parms['repo[]'])
         repos = repos.concat(parms['repo[]']);
       RepoSelector.updateSelected(repos);
+
+      // Sync theme dropdown from saved prefs (the early-load script in
+      // layout.html already applies the visual theme; this syncs the control)
+      var prefs = Cookies.getJSON('prefs');
+      if (prefs && prefs['syntaxTheme'] !== undefined && CodesearchUI.input_syntax_theme.length) {
+        CodesearchUI.input_syntax_theme.val(prefs['syntaxTheme']);
+      }
     },
     init_controls_from_prefs: function() {
       var prefs = Cookies.getJSON('prefs');
@@ -928,6 +1028,10 @@ var CodesearchUI = function() {
       }
       if (prefs['context'] !== undefined) {
         CodesearchUI.input_context.prop('checked', prefs['context']);
+      }
+      if (prefs['syntaxTheme'] !== undefined && CodesearchUI.input_syntax_theme.length) {
+        CodesearchUI.input_syntax_theme.val(prefs['syntaxTheme']);
+        applySyntaxTheme(prefs['syntaxTheme']);
       }
     },
     set_pref: function(key, value) {
@@ -1007,6 +1111,21 @@ var CodesearchUI = function() {
     search_done: function(search, time, search_type, why) {
       CodesearchUI.state.handle_done(search, time, search_type, why);
     },
+    render_repo_presets: function() {
+      var presets = CodesearchUI.repoPresets;
+      if (!presets || !presets.length) return;
+
+      var container = $('<div class="repo-presets"></div>');
+      presets.forEach(function(preset) {
+        var btn = $('<button class="repo-preset-btn"></button>').text(preset.name);
+        btn.on('click', function() {
+          RepoSelector.updateSelected(preset.repos);
+          CodesearchUI.newsearch();
+        });
+        container.append(btn);
+      });
+      $('#repos').closest('.search-option').append(container);
+    },
     repo_urls: {}
   };
 }();
@@ -1016,6 +1135,26 @@ var ivr = {};
 initData.internal_view_repos.forEach(function(name) { ivr[name] = true; });
 CodesearchUI.internalViewRepos = ivr;
 CodesearchUI.defaultSearchRepos = initData.default_search_repos;
+
+// Repo presets: each entry adds a button that selects a predefined set of repos.
+// Edit this array to add/remove/rename presets.
+CodesearchUI.repoPresets = [
+  {name: 'SDKs', repos: [
+    'getsentry/sentry-cocoa', 'getsentry/sentry-python', 'getsentry/sentry-ruby',
+    'getsentry/sentry-rust', 'getsentry/sentry-dotnet', 'getsentry/sentry-java',
+    'getsentry/sentry-javascript', 'getsentry/sentry-go', 'getsentry/sentry-php',
+    'getsentry/sentry-native', 'getsentry/sentry-react-native', 'getsentry/sentry-dart',
+    'getsentry/sentry-unity', 'getsentry/sentry-elixir', 'getsentry/sentry-laravel',
+  ]},
+  {name: 'Fullstack', repos: [
+    'getsentry/sentry', 'getsentry/relay', 'getsentry/snuba',
+    'getsentry/arroyo', 'getsentry/symbolicator', 'getsentry/objectstore',
+  ]},
+  {name: 'Tools', repos: [
+    'getsentry/sentry-cli', 'getsentry/sentry-mcp', 'getsentry/craft',
+    'getsentry/self-hosted',
+  ]},
+];
 CodesearchUI.linkConfigs = (initData.link_configs || []).map(function(link_config) {
   if (link_config.whitelist_pattern) {
     link_config.whitelist_pattern = new RegExp(link_config.whitelist_pattern);

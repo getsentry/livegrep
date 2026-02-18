@@ -20,19 +20,14 @@ jobs:
       - uses: actions/checkout@v3
       - name: Switch to CI bazelrc
         run: cp .bazelrc.ci .bazelrc
-      # Credit to the tensorboard repo for the cache configuration step
-      # https://github.com/tensorflow/tensorboard/blob/master/.github/workflows/ci.yml#L58
-      # Plenty of ways to do something similar but I really liked theirs
-      - name: 'Configure remote build cache usage'
-        env:
-          EVENT_TYPE: ${{ github.event_name }}
-        run: |
-          if [ "${EVENT_TYPE}" = pull_request ]; then
-            printf 'Using read-only cache (PR build)\n'
-            exit
-          fi
-          printf 'Using writable cache\n'
-          sed -i 's/common --remote_upload_local_results=false/common --remote_upload_local_results=true/' .bazelrc
+      - name: Cache Bazel disk cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel-disk
+          key: bazel-disk-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}-${{ github.sha }}
+          restore-keys: |
+            bazel-disk-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}-
+            bazel-disk-${{ runner.os }}-
       - name: bazel build
         id: build
         run: |
