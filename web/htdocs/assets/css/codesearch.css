@@ -279,15 +279,61 @@ a:hover {
 }
 
 .search-options {
-    width: 250px;
-    max-width: 250px;
+    width: 280px;
+    max-width: 280px;
     margin: 0;
     font-size: 12px;
-    line-height: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .search-option {
     white-space: nowrap;
+    line-height: 24px;
+}
+
+.search-option input[type="radio"],
+.search-option input[type="checkbox"] {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid var(--color-border-subtle);
+    background: var(--color-background);
+    vertical-align: middle;
+    margin: 0 2px 0 0;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms;
+}
+
+.search-option input[type="radio"] {
+    border-radius: 50%;
+}
+
+.search-option input[type="checkbox"] {
+    border-radius: 3px;
+}
+
+.search-option input[type="radio"]:checked {
+    border-color: var(--color-foreground-accent);
+    background: var(--color-foreground-accent);
+    box-shadow: inset 0 0 0 2.5px var(--color-background);
+}
+
+.search-option input[type="checkbox"]:checked {
+    border-color: var(--color-foreground-accent);
+    background: var(--color-foreground-accent);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3.5 7.5L6 10L10.5 4.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.search-option input[type="radio"]:hover,
+.search-option input[type="checkbox"]:hover {
+    border-color: var(--color-foreground-accent);
+}
+
+.search-option label {
+    cursor: pointer;
+    margin-right: 6px;
 }
 
 #regex-error {
@@ -912,4 +958,29 @@ div.example {
 .token.function,
 .token.bold {
     font-weight: bold;
+}
+
+/* Repo preset buttons */
+.repo-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 2px;
+    padding-left: 2px;
+}
+
+.repo-preset-btn {
+    background: var(--color-background-subtle);
+    border: 1px solid var(--color-border-default);
+    border-radius: 4px;
+    color: var(--color-foreground-muted);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 3px 10px;
+    transition: background 150ms, color 150ms;
+}
+
+.repo-preset-btn:hover {
+    background: var(--color-background-hover);
+    color: var(--color-foreground);
 }

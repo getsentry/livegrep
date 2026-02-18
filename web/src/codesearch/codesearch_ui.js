@@ -515,12 +515,14 @@ var SearchState = Backbone.Model.extend({
       return '/search';
     var base = '/search';
 
+    if (current.repo && current.repo.length) {
+      q.repo = current.repo;
+    }
     if (current.q !== "") {
       q.q = current.q;
       q.fold_case = current.fold_case;
       q.regex = current.regex;
       q.context = this.get('context');
-      q.repo = current.repo;
     }
 
     if (current.backend) {
@@ -910,6 +912,7 @@ var CodesearchUI = function() {
       setTimeout(function() {
         RepoSelector.init();
         CodesearchUI.update_repo_options();
+        CodesearchUI.render_repo_presets();
         CodesearchUI.init_query();
       }, 0);
 
@@ -1108,6 +1111,21 @@ var CodesearchUI = function() {
     search_done: function(search, time, search_type, why) {
       CodesearchUI.state.handle_done(search, time, search_type, why);
     },
+    render_repo_presets: function() {
+      var presets = CodesearchUI.repoPresets;
+      if (!presets || !presets.length) return;
+
+      var container = $('<div class="repo-presets"></div>');
+      presets.forEach(function(preset) {
+        var btn = $('<button class="repo-preset-btn"></button>').text(preset.name);
+        btn.on('click', function() {
+          RepoSelector.updateSelected(preset.repos);
+          CodesearchUI.newsearch();
+        });
+        container.append(btn);
+      });
+      $('#repos').closest('.search-option').append(container);
+    },
     repo_urls: {}
   };
 }();
@@ -1117,6 +1135,26 @@ var ivr = {};
 initData.internal_view_repos.forEach(function(name) { ivr[name] = true; });
 CodesearchUI.internalViewRepos = ivr;
 CodesearchUI.defaultSearchRepos = initData.default_search_repos;
+
+// Repo presets: each entry adds a button that selects a predefined set of repos.
+// Edit this array to add/remove/rename presets.
+CodesearchUI.repoPresets = [
+  {name: 'SDKs', repos: [
+    'getsentry/sentry-cocoa', 'getsentry/sentry-python', 'getsentry/sentry-ruby',
+    'getsentry/sentry-rust', 'getsentry/sentry-dotnet', 'getsentry/sentry-java',
+    'getsentry/sentry-javascript', 'getsentry/sentry-go', 'getsentry/sentry-php',
+    'getsentry/sentry-native', 'getsentry/sentry-react-native', 'getsentry/sentry-dart',
+    'getsentry/sentry-unity', 'getsentry/sentry-elixir', 'getsentry/sentry-laravel',
+  ]},
+  {name: 'Fullstack', repos: [
+    'getsentry/sentry', 'getsentry/relay', 'getsentry/snuba',
+    'getsentry/arroyo', 'getsentry/symbolicator', 'getsentry/objectstore',
+  ]},
+  {name: 'Tools', repos: [
+    'getsentry/sentry-cli', 'getsentry/sentry-mcp', 'getsentry/craft',
+    'getsentry/self-hosted',
+  ]},
+];
 CodesearchUI.linkConfigs = (initData.link_configs || []).map(function(link_config) {
   if (link_config.whitelist_pattern) {
     link_config.whitelist_pattern = new RegExp(link_config.whitelist_pattern);
