@@ -74,18 +74,20 @@ function flattenTokens(tokens) {
   for (var i = 0; i < tokens.length; i++) {
     var token = tokens[i];
     if (typeof token === 'string') {
-      result.push({type: null, text: token});
+      result.push({type: null, alias: null, text: token});
     } else if (token.content) {
+      var alias = token.alias || null;
       if (typeof token.content === 'string') {
-        result.push({type: token.type, text: token.content});
+        result.push({type: token.type, alias: alias, text: token.content});
       } else {
-        // Nested tokens - flatten and inherit type for untyped children
+        // Nested tokens - flatten and inherit type/alias for untyped children
         var nested = flattenTokens(
           Array.isArray(token.content) ? token.content : [token.content]
         );
         for (var j = 0; j < nested.length; j++) {
           result.push({
             type: nested[j].type || token.type,
+            alias: nested[j].alias || alias,
             text: nested[j].text
           });
         }
@@ -124,12 +126,12 @@ function splitAtBounds(segments, bounds) {
       var lastCut = 0;
       for (var c = 0; c < cuts.length; c++) {
         if (cuts[c] > lastCut) {
-          result.push({type: seg.type, text: seg.text.substring(lastCut, cuts[c])});
+          result.push({type: seg.type, alias: seg.alias, text: seg.text.substring(lastCut, cuts[c])});
         }
         lastCut = cuts[c];
       }
       if (lastCut < seg.text.length) {
-        result.push({type: seg.type, text: seg.text.substring(lastCut)});
+        result.push({type: seg.type, alias: seg.alias, text: seg.text.substring(lastCut)});
       }
     }
 
@@ -149,14 +151,22 @@ function buildNodes(segments, matchStart, matchEnd) {
     var segEnd = pos + seg.text.length;
     var inMatch = (pos >= matchStart && segEnd <= matchEnd);
 
-    if (!seg.type && !inMatch) {
+    var hasType = seg.type || seg.alias;
+    if (!hasType && !inMatch) {
       nodes.push(document.createTextNode(seg.text));
     } else {
       var span = document.createElement('span');
       var classes = [];
-      if (seg.type) {
+      if (hasType) {
         classes.push('token');
-        classes.push(seg.type);
+        if (seg.type) classes.push(seg.type);
+        if (seg.alias) {
+          if (Array.isArray(seg.alias)) {
+            for (var a = 0; a < seg.alias.length; a++) classes.push(seg.alias[a]);
+          } else {
+            classes.push(seg.alias);
+          }
+        }
       }
       if (inMatch) {
         classes.push('matchstr');

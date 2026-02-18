@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -184,6 +185,14 @@ func (s *server) doSearch(ctx context.Context, backend *Backend, q *pb.Query) (*
 		})
 	}
 
+	// Derank test file results by sorting them to the end
+	sort.SliceStable(reply.Results, func(i, j int) bool {
+		return !isTestFile(reply.Results[i].Path) && isTestFile(reply.Results[j].Path)
+	})
+	sort.SliceStable(reply.FileResults, func(i, j int) bool {
+		return !isTestFile(reply.FileResults[i].Path) && isTestFile(reply.FileResults[j].Path)
+	})
+
 	reply.Info = &api.Stats{
 		RE2Time:     search.Stats.Re2Time,
 		GitTime:     search.Stats.GitTime,
@@ -274,4 +283,19 @@ func (s *server) ServeAPISearch(ctx context.Context, w http.ResponseWriter, r *h
 		asJSON{reply.Info})
 
 	replyJSON(ctx, w, 200, reply)
+}
+
+func isTestFile(path string) bool {
+	return strings.HasPrefix(path, "test/") ||
+		strings.HasPrefix(path, "tests/") ||
+		strings.Contains(path, "/test/") ||
+		strings.Contains(path, "/tests/") ||
+		strings.Contains(path, "/__tests__/") ||
+		strings.HasSuffix(path, "_test.go") ||
+		strings.HasSuffix(path, ".test.ts") ||
+		strings.HasSuffix(path, ".test.js") ||
+		strings.HasSuffix(path, ".test.tsx") ||
+		strings.HasSuffix(path, "_test.py") ||
+		strings.HasSuffix(path, ".spec.ts") ||
+		strings.HasSuffix(path, ".spec.js")
 }
