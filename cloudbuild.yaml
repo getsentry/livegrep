@@ -43,7 +43,8 @@ images:
   - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
   - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
 
-timeout: 1800s
+timeout: 3600s
 
 options:
+  machineType: 'E2_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
