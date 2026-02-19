@@ -15,12 +15,14 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.25.0/bazelisk-linux-amd64 \
     -o /usr/local/bin/bazel && chmod +x /usr/local/bin/bazel
 
+RUN useradd -m builder
 WORKDIR /src
-COPY . .
+COPY --chown=builder . .
 
 # Use CI bazelrc for optimized builds
 RUN cp .bazelrc.ci .bazelrc
 
+USER builder
 RUN bazel build :livegrep \
     && mkdir -p /output \
     && tar -C /output -xf "$(bazel info bazel-bin)/livegrep.tar"
