@@ -4,11 +4,11 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
       - '-t'
-      - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
       - '-t'
-      - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
       - '.'
 
   # Push all tags
@@ -16,7 +16,7 @@ steps:
     args:
       - 'push'
       - '--all-tags'
-      - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image'
 
   # Deploy to Cloud Run service
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -26,7 +26,8 @@ steps:
       - 'update'
       - 'livegrep-web-and-server'
       - '--region=us-west2'
-      - '--image=us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+      - '--project=snty-tools'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
 
   # Deploy to Cloud Run indexer job
   - name: 'gcr.io/cloud-builders/gcloud'
@@ -36,12 +37,13 @@ steps:
       - 'update'
       - 'livegrep-indexer'
       - '--region=us-west2'
-      - '--image=us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+      - '--project=snty-tools'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
 
 images:
-  - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
-  - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
-  - 'us-west2-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$SHORT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:latest'
 
 timeout: 3600s
 
