@@ -15,7 +15,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.25.0/bazelisk-linux-amd64 \
     -o /usr/local/bin/bazel && chmod +x /usr/local/bin/bazel
 
-RUN useradd -m builder
+RUN useradd -m builder && mkdir -p /output && chown builder /output
 WORKDIR /src
 COPY --chown=builder . .
 
