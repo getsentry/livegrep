@@ -16,8 +16,13 @@ bazel_dep(name = "abseil-cpp", version = "20250512.1")
 bazel_dep(name = "boost.bind", version = "1.87.0")
 bazel_dep(name = "boost.filesystem", version = "1.87.0")
 bazel_dep(name = "boost.intrusive", version = "1.87.0")
-bazel_dep(name = "gazelle", version = "0.44.0")
-bazel_dep(name = "rules_go", version = "0.55.1")
+bazel_dep(name = "gazelle", version = "0.51.3")
+bazel_dep(name = "rules_go", version = "0.64.2")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+
+# Use the Go SDK named by the toolchain directive in go.mod.
+go_sdk.from_file(go_mod = "//:go.mod")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
