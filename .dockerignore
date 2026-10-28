@@ -3,3 +3,4 @@ builds/
 .git
 .circleci
 .github
+gha-creds-*.json

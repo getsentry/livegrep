@@ -1,0 +1,57 @@
+name: Publish image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-image
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Resolve image version
+        id: version
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          BUILD_ATTEMPT: ${{ github.run_attempt }}
+        run: echo "value=0.1.0-${BUILD_NUMBER}.${BUILD_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: projects/868781662168/locations/global/workloadIdentityPools/prod-github/providers/github-oidc-pool
+          service_account: livegrep-publisher@internal-sentry.iam.gserviceaccount.com
+          project_id: internal-sentry
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+
+      - name: Build and publish image
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          gcloud builds submit \
+            --config=cloudbuild.yaml \
+            --substitutions="_IMAGE=us-central1-docker.pkg.dev/internal-sentry/livegrep/image:${VERSION}" \
+            --project=internal-sentry \
+            --service-account=projects/internal-sentry/serviceAccounts/livegrep-cloudbuild@internal-sentry.iam.gserviceaccount.com \
+            --gcs-source-staging-dir=gs://internal-sentry-livegrep-cloudbuild/source \
+            --gcs-log-dir=gs://internal-sentry-livegrep-cloudbuild/logs
+
+      - name: Publish release tag for Renovate
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "livegrep $VERSION"
+          git push origin "$VERSION"
