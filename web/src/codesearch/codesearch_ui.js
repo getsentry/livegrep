@@ -129,7 +129,8 @@ function internalUrl(tree, path, lno) {
 }
 
 function externalRepoUrl(tree, version, path, lno) {
-  var backend = Codesearch.in_flight.backend;
+  var backend = Codesearch.in_flight ? Codesearch.in_flight.backend :
+    (CodesearchUI.input_backend && CodesearchUI.input_backend.val());
   var repo_map = CodesearchUI.repo_urls[backend];
   if (!repo_map) {
     return null;
