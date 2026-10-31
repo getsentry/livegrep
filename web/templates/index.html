@@ -3,16 +3,18 @@
 {{define "body"}}
 <div id='searcharea'>
   <div class="search-inputs">
-    <div class="prefixed-input filter-code">
-      <label class="prefix-label" for="searchbox">Query:</label>
-      <input type="text" id='searchbox' tabindex="1" required="required" />
+    <div class="searchbox-wrap">
+      <svg class="searchbox-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <label class="sr-only" for="searchbox">Query</label>
+      <input type="text" id='searchbox' tabindex="1" required="required"
+             placeholder="Search code" autocomplete="off" autocapitalize="off" spellcheck="false" />
     </div>
     <div id='regex-error'>
       <span id='errortext'></span>
     </div>
 
     <div class='query-hint'>
-      Special terms:
+      <span>Filters:</span>
       <code>path:</code>
       <code>-path:</code>
       <code>repo:</code>
@@ -22,29 +24,29 @@
   </div>
 
   <div class="search-options">
-    <div class="search-option">
-      <span class="label">Case:</span>
-      <input type='radio' name='fold_case' value='false' id='case-match' tabindex="3" />
-      <label for='case-match'>match</label>
-      <input type='radio' name='fold_case' value='auto' id='case-auto' tabindex="4" />
-      <label for='case-auto'>auto</label>
-      [<span class="tooltip-target">?<div class="tooltip">
-        Case-sensitive if the query contains capital letters
-      </div></span>]
-      <input type='radio' name='fold_case' value='true' id='case-ignore' tabindex="5" />
-      <label for='case-ignore'>ignore</label>
+    <div class="search-option" role="group" aria-label="Case sensitivity">
+      <span class="opt-label">Case</span>
+      <div class="segmented">
+        <input type='radio' name='fold_case' value='false' id='case-match' tabindex="3" />
+        <label for='case-match'>Match</label>
+        <input type='radio' name='fold_case' value='auto' id='case-auto' tabindex="4" />
+        <label for='case-auto' title="Case-sensitive if the query contains capital letters">Auto</label>
+        <input type='radio' name='fold_case' value='true' id='case-ignore' tabindex="5" />
+        <label for='case-ignore'>Ignore</label>
+      </div>
     </div>
 
     <div class="search-option">
-      <span class="label">Regex:</span>
-      <input type='checkbox' name='regex' id='regex' tabindex="6" />
-      <label for='regex'>on</label>
+      <input type='checkbox' name='regex' id='regex' class="toggle-input" tabindex="6" />
+      <label for='regex' class="toggle">Regex</label>
+      <input type='checkbox' name='context' id='context' class="toggle-input" tabindex="8" checked="CHECKED" />
+      <label for='context' class="toggle">Context</label>
     </div>
 
     {{if gt (.Data.Backends | len) 1 }}
       {{ $backend := .Data.Backend }}
       <div class="search-option">
-        <span class="label">Search:</span>
+        <label class="opt-label" for="backend">Index</label>
         <select id='backend' tabindex="7">
         {{range .Data.Backends}}
           <option value="{{.Id}}" {{if eq .Id $backend}}selected{{end}}>{{.I.Name}}</option>
@@ -56,28 +58,16 @@
         <select id='backend' style='display: none;'>
           <option value="{{.Id}}">{{.I.Name}}</option>
         </select>
-        {{if ne (.I.Name) "-"}}
-          <div class="search-option">
-            <span class="label">Searching:</span>
-            {{.I.Name}}
-          </div>
-        {{end}}
       {{end}}
     {{end}}
 
-    <div class="search-option">
-      <span class="label">Repo:</span>
+    <div class="search-option search-option-repos">
+      <span class="opt-label">Repos</span>
       <select id="repos" multiple></select>
     </div>
 
-    <div class="search-option">
-      <span class="label">Context:</span>
-      <input type='checkbox' name='context' id='context' tabindex="8" checked="CHECKED" />
-      <label for='context'>on</label>
-    </div>
-
-    <div class="search-option">
-      <span class="label">Theme:</span>
+    <div class="search-option search-option-theme">
+      <label class="opt-label" for="syntax-theme">Theme</label>
       <select id="syntax-theme" tabindex="9"></select>
     </div>
   </div>
@@ -85,7 +75,7 @@
 
 <div id='resultbox'>
 <div id='helparea'>
-  <div class='helpsection'><h5>Special query terms</h5></div>
+  <h2 class='helpsection'>Filters</h2>
   <table>
     <tr>
       <td><code>path:</code></td>
@@ -118,21 +108,19 @@
       <td><a href="/search?q=(file:)&regex=true">example</a></td>
     </tr>
   </table>
-  <div class='helpsection'><h5>Regular Expressions</h5></div>
+  <h2 class='helpsection'>Regular expressions</h2>
   <p>
     See <a href="https://github.com/google/re2/wiki/Syntax">the RE2
     documentation</a> for a complete listing of supported regex syntax.
+    Select text in the results and press <kbd>/</kbd> to search for it.
   </p>
 </div>
 <div id='resultarea'>
   <div id='countarea'>
-    <span id='numresults'>0</span> matches found
+    <span id='numresults'>0</span> matches
     <span id='searchtimebox'>
-      <span class='label'>
-        /
-      </span>
-      <span id='searchtime'>
-      </span>
+      <span class='sep'>&middot;</span>
+      <span id='searchtime'></span>
     </span>
   </div>
   <div id='results' tabindex='-1'>

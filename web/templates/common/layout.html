@@ -1,8 +1,9 @@
 {{define "layout"}}
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html lang="en">
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     {{if .Config.GoogleAnalyticsId}}
     <!-- Google tag (gtag.js) -->
     <script{{.Nonce}} async src="https://www.googletagmanager.com/gtag/js?id={{.Config.GoogleAnalyticsId}}"></script>
@@ -76,14 +77,14 @@
       {{if .Config.HeaderHTML}}
         {{.Config.HeaderHTML}}
       {{else}}
+        <a class="brand" href="/">livegrep</a>
         <ul>
-          <li><a href="/">search</a></li>
-          <li><a href="/about">about</a></li>
-          <li><a href="https://github.com/livegrep/livegrep">source</a></li>
+          <li><a href="/">Search</a></li>
+          <li><a href="/about">About</a></li>
+          <li><a href="https://github.com/getsentry/livegrep">Source</a></li>
           {{if .Config.Feedback.MailTo}}
-          <li><a id='feedbacklink' href="mailto:{{.Config.Feedback.MailTo}}">feedback</a></li>
+          <li><a id='feedbacklink' href="mailto:{{.Config.Feedback.MailTo}}">Feedback</a></li>
           {{end}}
-          <li class='first'>livegrep is a project by <a href="http://blog.nelhage.com/">Nelson Elhage</a></li>
         </ul>
       {{end}}
     </div>
