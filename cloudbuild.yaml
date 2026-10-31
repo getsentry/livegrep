@@ -27,6 +27,9 @@ steps:
       - 'livegrep-web-and-server'
       - '--region=us-west2'
       - '--project=snty-tools'
+      - '--container=web'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
+      - '--container=backend'
       - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/image:$COMMIT_SHA'
 
   # Deploy to Cloud Run indexer job
